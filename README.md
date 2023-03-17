@@ -11,5 +11,4 @@ a teacher will get paid for each enrolled student
 |Martha|UGR-7017-13|
 |Michael|UGR-8850-13|
 |Naol|UGR-1048-13|
-|Yohannes|UGR-3616-13|
 |Yusra|UGR-6201-13|

@@ -40,6 +40,8 @@ dependencies:
   shared_preferences:
   dartz:
   bloc:
+  flutter_bloc:
+  get_it:
 
 dev_dependencies:
   flutter_test:

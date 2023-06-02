@@ -1,22 +1,64 @@
-//for signup
 const User = require("../models/user");
 const { errorHandler } = require("../helper/dbErrorHandler");
 
-//for signin
 const jwt = require("jsonwebtoken");
 const expressJwt = require("express-jwt");
+const bcrypt = require("bcrypt");
 
-exports.signup = (req, res) => {
-  const user = User(req.body);
-  console.log(req.body);
-  user
-    .save()
-    .then(() => {
-      user.password = undefined;
-      res.json({ user });
-    })
-    .catch((err) => res.status(400).json({ err: errorHandler(err) }));
+
+exports.signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if the email is already registered
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new user
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    // Save the user to the database
+    await user.save();
+
+    // to generate token
+    const token = jwt.sign({ userId: user._id }, process.env.jwt_token);
+    res.cookie("t", token, { expire: new Date() + 99999 });
+
+    // return the user information and token
+    res.json({
+      token: token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ err: errorHandler(err) });
+  }
 };
+
+// exports.signup = (req, res) => {
+//   const user = User(req.body);
+//   console.log(req.body);
+//   user
+//     .save()
+//     .then(() => {
+//       user.password = undefined;
+//       res.json({ user });
+//     })
+//     .catch((err) => res.status(400).json({ err: errorHandler(err) }));
+// };
 
 exports.signin = (req, res) => {
   const { email, password } = req.body;
@@ -50,9 +92,8 @@ exports.requireSignin = expressJwt({
   userProperty: "auth",
 });
 
-
-exports.isAuthenticated=(req, res, next) =>{
-  console.log(req.headers)
+exports.isAuthenticated = (req, res, next) => {
+  console.log(req.headers);
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -64,7 +105,7 @@ exports.isAuthenticated=(req, res, next) =>{
     if (err) {
       return res.status(403).json({ message: "Invalid token" });
     }
-console.log(decoded)
+    console.log(decoded);
     try {
       const user = await User.findById(decoded._id);
       if (!user) {
@@ -72,14 +113,13 @@ console.log(decoded)
       }
       // to make the user object available in the request
       req.user = user;
-      
+
       next();
     } catch (error) {
-      
       res.status(500).json({ message: "Internal server error" });
     }
   });
-}
+};
 
 // changed req.profile.role ===0 to !req.user.isAdmin
 // and notadmin to Unauthorized
@@ -87,11 +127,9 @@ exports.isAdmin = (req, res, next) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ err: "Unauthorized" });
   }
-  
+
   next();
 };
-
-
 
 exports.isAuth = (req, res, next) => {
   console.log(req.profile);
@@ -100,7 +138,7 @@ exports.isAuth = (req, res, next) => {
   if (user) {
     return res.status(403).json({ err: "Not authenticated" });
   }
- 
+
   next();
 };
 
